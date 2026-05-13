@@ -18,7 +18,7 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
   <PageHero
     eyebrow="Reservation Board"
     title="预约流转看板"
-    subtitle="preorder 表先被拆成状态看板和时间线两层展示，方便判断未来需要表单、备注还是审批动作。"
+    subtitle="预约按状态分列，同时展示最近处理记录。"
     panelTitle="预约概览"
     stats={[
       { value: activeCount, label: '已预约' },
@@ -36,7 +36,7 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
       <SectionIntro
         eyebrow="Kanban"
         title="状态看板"
-        description="当前先按四种状态拆列，后续如果需要可以继续加入提醒、审批或售后节点。"
+        description="按状态分列的预约看板。"
       />
 
       <div class="kanban-grid">

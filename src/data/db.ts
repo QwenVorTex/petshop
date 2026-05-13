@@ -535,7 +535,7 @@ export const apiCatalog = [
   {
     name: '顾客视图',
     path: '/api/customers',
-    description: '返回顾客列表及其预约关系，便于未来替换为真实查询。',
+    description: '返回顾客列表及其预约关系。',
   },
   {
     name: '员工视图',

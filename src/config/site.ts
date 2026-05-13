@@ -1,9 +1,8 @@
 export const siteConfig = {
   title: 'PetShop OPS',
-  name: 'PetShop Operations Prototype',
+  name: 'PetShop Operations',
   shortName: 'PSHOP',
-  description:
-    '一个使用 Astro + TypeScript + mock data 搭建的宠物商店系统原型站，当前不连接数据库，优先验证信息结构、页面流程和接口形态。',
+  description: '宠物商店运营管理平台。',
   locale: 'zh-CN',
   url: 'http://localhost:4321',
   navigation: {
@@ -20,10 +19,10 @@ export const siteConfig = {
     ],
   },
   dashboard: {
-    eyebrow: 'Pet Shop System Prototype',
-    title: '宠物商店系统，先把界面和流程跑起来',
+    eyebrow: 'Pet Shop System',
+    title: '宠物商店管理系统',
     subtitle:
-      '页面结构和 TypeScript 接口已经围绕现有 SQL schema 建好，当前全部数据来自 mock layer，后续可以直接替换为真实数据库查询。',
+      '围绕宠物、库存、顾客、员工和预约五大模块构建的运营管理平台。',
     primaryCta: { label: '查看宠物档案', href: '/pets' },
     secondaryCta: { label: '查看接口设计', href: '/insights' },
   },

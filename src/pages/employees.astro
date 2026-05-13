@@ -16,7 +16,7 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
   <PageHero
     eyebrow="Staff Ops"
     title="员工与负责关系"
-    subtitle="employee 表和 employee_pet_manage 关系表已经合并为工作负载面板。后续换成真实数据库时，只需要保持相同字段输出。"
+    subtitle="员工资料、工资和宠物管理关系一览。"
     panelTitle="团队概览"
     stats={[
       { value: employeeRows.length, label: '员工总数' },
@@ -33,7 +33,7 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
       <SectionIntro
         eyebrow="Team Cards"
         title="员工负载卡片"
-        description={`当前团队平均年龄 ${averageAge} 岁。卡片里先保留工资、负责数量和职责摘要三个最关键的信息块。`}
+        description={`当前团队平均年龄 ${averageAge} 岁。`}
       />
 
       <div class="grid grid--3">

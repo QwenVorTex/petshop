@@ -52,30 +52,29 @@ const metrics = [
 
 const modules = [
   {
-    title: '页面结构先落地',
-    copy: '首页、宠物、库存、顾客、员工、预约和洞察页都已经围绕 SQL schema 的实体关系拆好了。',
+    title: '宠物管理',
+    copy: '宠物档案、状态、价格和库存信息，支持按品种和状态筛选。',
     tone: 'accent',
   },
   {
-    title: '接口层用 TypeScript',
-    copy: '所有接口都放在 /api 下，返回字段和页面读取逻辑对应，后续替换数据源时不用重写页面。',
+    title: '库存与仓位',
+    copy: '库存数量、笼位、仓位和低库存预警，支持联表查看宠物详情。',
     tone: '',
   },
   {
-    title: '数据库延后接入',
-    copy: '当前没有创建数据库，也没有连真实后端。数据层全部集中在 mock.ts，便于后续替换。',
+    title: '预约与顾客',
+    copy: '预约状态流转看板、顾客档案和意向宠物关联。',
     tone: 'card--link',
   },
 ];
 ---
 
-<BaseLayout title="PetShop OPS" description="宠物商店系统仪表盘与业务原型页面。">
+<BaseLayout title="PetShop OPS" description="宠物商店系统仪表盘。">
   <PageHero
-    eyebrow="Pet Shop System Prototype"
-    title="宠物商店系统，先把界面和流程跑起来"
-    subtitle="参考 Blog 的粗野主义前端风格重新做了一个更偏业务系统的版本。当前所有数据来自 TypeScript mock layer，但页面结构已经对齐 SQL schema。"
-    panelTitle="当前运行模式"
-    panelCopy="前端视觉和接口形态已经就位。后续接入真实数据库时，可以直接替换数据层和 API 实现。"
+    eyebrow="Pet Shop System"
+    title="宠物商店管理系统"
+    subtitle="围绕宠物、库存、顾客、员工和预约五大模块构建的运营管理平台。"
+    panelTitle="数据概览"
     stats={[
       { value: snapshot.petCount, label: '宠物记录' },
       { value: snapshot.customerCount, label: '顾客档案' },
@@ -98,7 +97,7 @@ const modules = [
       <SectionIntro
         eyebrow="Dashboard"
         title="核心指标"
-        description="把现有 schema 能支撑的关键信息先做成可视化指标，验证后台信息密度和优先级。"
+        description="宠物、库存、预约和员工的核心运营指标。"
       />
 
       <div class="grid grid--4">
@@ -114,7 +113,7 @@ const modules = [
       <SectionIntro
         eyebrow="Pet Spotlight"
         title="当前重点宠物"
-        description="先展示在售或高价值宠物，确认视觉卡片和业务字段的组合方式。"
+        description="在售和高价值宠物一览。"
         actionLabel="进入宠物页"
         actionHref="/pets"
       />
@@ -218,7 +217,7 @@ const modules = [
       <SectionIntro
         eyebrow="Structure"
         title="数据结构怎么映射到站点"
-        description="站点不是临时的静态海报，而是围绕后续真实数据库接入预留了页面、接口和视图的替换点。"
+        description="站点页面、接口与数据库 schema 的对应关系。"
       />
 
       <div class="grid grid--3">

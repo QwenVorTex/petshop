@@ -17,7 +17,7 @@ const inventoryRows = await getPetInventoryView();
   <PageHero
     eyebrow="Inventory Control"
     title="库存与仓位"
-    subtitle="inventory 表不只是数量。这里同时展示仓位、笼位和低库存预警，确认后续后台是否需要更多运维字段。"
+    subtitle="库存数量、仓位、笼位和低库存预警一览。"
     panelTitle="库存概览"
     stats={[
       { value: overview.totalQuantity, label: '总库存量' },
@@ -35,7 +35,7 @@ const inventoryRows = await getPetInventoryView();
       <SectionIntro
         eyebrow="Alerts"
         title="库存预警"
-        description="当前规则很简单：库存数量或笼位小于等于 1 就会进入提醒面板。"
+        description="库存数量或笼位 ≤ 1 时触发预警。"
       />
 
       <div class="grid grid--3">
@@ -66,7 +66,7 @@ const inventoryRows = await getPetInventoryView();
             <p class="text-label">Inventory View</p>
             <h3>库存联表结果</h3>
           </div>
-          <span class="badge">Mock Query</span>
+          <span class="badge">SQL View</span>
         </div>
         <div class="table-shell">
           <table>

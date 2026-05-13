@@ -6,13 +6,11 @@ import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import StatusPill from '@/components/StatusPill.astro';
 import {
-  apiCatalog,
   getDashboardSnapshot,
   getEmployeeAssignmentRows,
   getFeaturedPets,
   getLowStockAlerts,
   getRecentPreorders,
-  getSpeciesDistribution,
 } from '@/data/db';
 import { formatCurrency, formatDateTime } from '@/lib/format';
 
@@ -21,7 +19,6 @@ const featuredPets = await getFeaturedPets(3);
 const lowStockAlerts = (await getLowStockAlerts()).slice(0, 4);
 const recentPreorders = (await getRecentPreorders(4));
 const staffLoad = (await getEmployeeAssignmentRows()).slice(0, 4);
-const speciesDistribution = (await getSpeciesDistribution()).slice(0, 4);
 
 const metrics = [
   {
@@ -50,23 +47,6 @@ const metrics = [
   },
 ];
 
-const modules = [
-  {
-    title: '宠物管理',
-    copy: '宠物档案、状态、价格和库存信息，支持按品种和状态筛选。',
-    tone: 'accent',
-  },
-  {
-    title: '库存与仓位',
-    copy: '库存数量、笼位、仓位和低库存预警，支持联表查看宠物详情。',
-    tone: '',
-  },
-  {
-    title: '预约与顾客',
-    copy: '预约状态流转看板、顾客档案和意向宠物关联。',
-    tone: 'card--link',
-  },
-];
 ---
 
 <BaseLayout title="PetShop OPS" description="宠物商店系统仪表盘。">
@@ -82,7 +62,6 @@ const modules = [
     ]}
   >
     <Button label="查看宠物档案" href="/pets" />
-    <Button label="查看接口设计" href="/insights" variant="ghost" />
 
     <div slot="visual" class="hero-matrix" aria-hidden="true">
       <div class="hero-matrix__cell hero-matrix__cell--accent">PET</div>
@@ -143,7 +122,7 @@ const modules = [
       <SectionIntro
         eyebrow="Operations"
         title="今日运营面板"
-        description="首页不做空泛介绍，直接摆出最容易驱动动作的三个面板：库存告警、预约流转和员工负载。"
+        description="实时运营数据一览：库存告警、预约流转和员工工作负载。"
       />
 
       <div class="board-grid">
@@ -215,35 +194,28 @@ const modules = [
   <section class="section section--compact">
     <div class="container">
       <SectionIntro
-        eyebrow="Structure"
-        title="数据结构怎么映射到站点"
-        description="站点页面、接口与数据库 schema 的对应关系。"
+        eyebrow="Navigation"
+        title="功能模块"
+        description="快速进入各业务模块查看详情和执行操作。"
       />
 
-      <div class="grid grid--3">
-        {modules.map((item) => (
-          <article class:list={['card', item.tone, 'scroll-reveal']}>
-            <h3>{item.title}</h3>
-            <p>{item.copy}</p>
-          </article>
-        ))}
-      </div>
-
-      <div class="api-strip card card--flat scroll-reveal">
-        <div>
-          <p class="text-label">API Preview</p>
-          <h3>已经准备好的接口</h3>
-        </div>
-        <div class="api-strip__links">
-          {apiCatalog.slice(0, 3).map((item) => (
-            <a href={item.path}>{item.path}</a>
-          ))}
-        </div>
-        <div class="api-strip__species">
-          {speciesDistribution.map((item) => (
-            <span>{item.species} × {item.count}</span>
-          ))}
-        </div>
+      <div class="grid grid--4">
+        <a href="/pets" class="card card--flat nav-card scroll-reveal">
+          <h3>宠物管理</h3>
+          <p>宠物档案、状态、价格和库存信息。</p>
+        </a>
+        <a href="/inventory" class="card card--flat nav-card scroll-reveal">
+          <h3>库存监控</h3>
+          <p>库存数量、仓位、笼位和低库存预警。</p>
+        </a>
+        <a href="/preorders" class="card card--flat nav-card scroll-reveal">
+          <h3>预约管理</h3>
+          <p>预约状态流转、顾客预约记录。</p>
+        </a>
+        <a href="/employees" class="card card--flat nav-card scroll-reveal">
+          <h3>员工管理</h3>
+          <p>员工资料、工资和宠物分工。</p>
+        </a>
       </div>
     </div>
   </section>
@@ -355,35 +327,19 @@ const modules = [
     font-size: var(--text-sm);
   }
 
-  .api-strip {
-    margin-top: var(--space-10);
-    display: grid;
-    grid-template-columns: 1.1fr 1fr 1fr;
-    gap: var(--space-6);
-    align-items: start;
+  .nav-card {
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
   }
 
-  .api-strip h3 {
-    margin-bottom: 0;
-  }
-
-  .api-strip__links,
-  .api-strip__species {
-    display: grid;
-    gap: var(--space-3);
-  }
-
-  .api-strip__links a,
-  .api-strip__species span {
-    padding: var(--space-3);
-    border: var(--border-medium);
-    background: var(--color-surface);
-    box-shadow: var(--shadow-sm);
+  .nav-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
   }
 
   @media (max-width: 1024px) {
-    .board-grid,
-    .api-strip {
+    .board-grid {
       grid-template-columns: 1fr;
     }
   }

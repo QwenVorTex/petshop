@@ -7,7 +7,7 @@ interface Props {
 const { id, title } = Astro.props;
 ---
 
-<div id={id} class="modal" hidden>
+<div id={id} class="modal" hidden data-modal-root>
   <div class="modal__backdrop"></div>
   <div class="modal__content">
     <div class="modal__header">
@@ -88,3 +88,45 @@ const { id, title } = Astro.props;
     padding: var(--space-6);
   }
 </style>
+
+<script>
+  // 模态框位置管理：打开时移到 body，关闭时移回原位
+  const modalParents = new Map<string, Element>();
+
+  function initModal(modal: HTMLElement) {
+    const id = modal.id;
+    // 记录原始父元素
+    modalParents.set(id, modal.parentElement!);
+  }
+
+  // 初始化所有模态框
+  document.querySelectorAll('[data-modal-root]').forEach((el) => {
+    initModal(el as HTMLElement);
+  });
+
+  // 监听模态框打开/关闭
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'attributes' && mutation.attributeName === 'hidden') {
+        const modal = mutation.target as HTMLElement;
+        if (!modal.hasAttribute('data-modal-root')) return;
+
+        const id = modal.id;
+        const originalParent = modalParents.get(id);
+
+        if (!modal.hidden) {
+          // 打开：移到 body
+          document.body.appendChild(modal);
+        } else if (originalParent) {
+          // 关闭：移回原位
+          originalParent.appendChild(modal);
+        }
+      }
+    });
+  });
+
+  // 观察所有模态框
+  document.querySelectorAll('[data-modal-root]').forEach((el) => {
+    observer.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+  });
+</script>

@@ -1,0 +1,104 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionIntro from '@/components/SectionIntro.astro';
+import { apiCatalog, schemaModules } from '@/data/db';
+
+const futureSteps = [
+  '把 src/data/mock.ts 拆成 repository 和 seed 两层。',
+  '用真实查询替换 /api/*.ts 的 mock 返回值。',
+  '保留当前页面字段结构，避免前端重写。',
+];
+---
+
+<BaseLayout title="系统洞察" description="系统结构、接口和后续接入数据库的路线图。">
+  <PageHero
+    eyebrow="System Insights"
+    title="结构、接口与替换路径"
+    subtitle="这个页面不是文档堆砌，而是明确告诉你：现在哪些东西已经固定，后续接数据库时应该替换哪一层。"
+    panelTitle="当前范围"
+    stats={[
+      { value: schemaModules.length, label: '数据模块' },
+      { value: apiCatalog.length, label: 'Mock API' },
+      { value: futureSteps.length, label: '下一步动作' },
+    ]}
+  >
+    <Button label="打开 /api/summary" href="/api/summary" />
+    <Button label="回到首页" href="/" variant="ghost" />
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Schema Mapping"
+        title="SQL schema 已经映射到页面模块"
+        description="虽然当前不建数据库，但页面结构和接口字段都已经围绕 petshop_schema.sql 的实体设计好了。"
+      />
+
+      <div class="grid grid--3">
+        {schemaModules.map((item) => (
+          <article class="card scroll-reveal">
+            <p class="text-label">{item.table}</p>
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+            <div class="insight-tags">
+              {item.fields.map((field) => (
+                <code>{field}</code>
+              ))}
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container">
+      <SectionIntro
+        eyebrow="API"
+        title="已经准备好的接口"
+        description="这些接口全部使用 TypeScript 编写，当前返回 mock data，后续可直接改为数据库查询。"
+      />
+
+      <div class="grid grid--3">
+        {apiCatalog.map((item) => (
+          <article class="card card--flat scroll-reveal">
+            <p class="text-label">{item.name}</p>
+            <h3>{item.path}</h3>
+            <p>{item.description}</p>
+            <a href={item.path}>打开接口</a>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Next"
+        title="接入真实数据库时怎么做"
+        description="建议把数据库接入限制在数据层和接口层，不要让页面直接依赖 ORM 或 SQL。"
+      />
+
+      <div class="grid grid--3">
+        {futureSteps.map((step, index) => (
+          <article class:list={['card', index === 0 ? 'card--accent' : index === 2 ? 'card--link' : '', 'scroll-reveal']}>
+            <p class="text-display">{index + 1}</p>
+            <p>{step}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .insight-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+</style>
+

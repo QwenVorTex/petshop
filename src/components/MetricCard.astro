@@ -1,0 +1,47 @@
+---
+interface Props {
+  label: string;
+  value: string | number;
+  detail: string;
+  tone?: 'neutral' | 'accent' | 'action' | 'link';
+}
+
+const { label, value, detail, tone = 'neutral' } = Astro.props;
+
+const toneClass =
+  tone === 'accent'
+    ? 'card--accent'
+    : tone === 'action'
+      ? 'card--action'
+      : tone === 'link'
+        ? 'card--link'
+        : '';
+---
+
+<article class:list={['metric-card', 'card', toneClass, 'scroll-reveal']}>
+  <p class="metric-card__label text-label">{label}</p>
+  <p class="metric-card__value">{value}</p>
+  <p class="metric-card__detail">{detail}</p>
+</article>
+
+<style>
+  .metric-card__label {
+    margin-bottom: var(--space-3);
+  }
+
+  .metric-card__value {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 5vw, 3.25rem);
+    line-height: 0.95;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    margin-bottom: var(--space-3);
+  }
+
+  .metric-card__detail {
+    margin-bottom: 0;
+    color: inherit;
+    opacity: 0.8;
+  }
+</style>
+

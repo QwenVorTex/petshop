@@ -1,0 +1,33 @@
+---
+interface Props {
+  label: string;
+  href?: string;
+  variant?: 'primary' | 'action' | 'ghost';
+  type?: 'button' | 'submit';
+  newTab?: boolean;
+}
+
+const {
+  label,
+  href,
+  variant = 'primary',
+  type = 'button',
+  newTab = false,
+} = Astro.props;
+---
+
+{href ? (
+  <a
+    href={href}
+    class:list={['btn', `btn--${variant}`]}
+    target={newTab ? '_blank' : undefined}
+    rel={newTab ? 'noreferrer noopener' : undefined}
+  >
+    {label}
+  </a>
+) : (
+  <button type={type} class:list={['btn', `btn--${variant}`]}>
+    {label}
+  </button>
+)}
+

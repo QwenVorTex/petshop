@@ -1,0 +1,220 @@
+<div class="brutalist-cursor" id="brutalist-cursor" aria-hidden="true" data-mode="default" data-pressed="false">
+  <div class="brutalist-cursor__shadow" id="cursor-shadow"></div>
+  <div class="brutalist-cursor__core" id="cursor-core">
+    <div class="brutalist-cursor__core-mark"></div>
+  </div>
+</div>
+
+<style is:global>
+  @media (hover: hover) and (pointer: fine) {
+    html.has-brutalist-cursor body,
+    html.has-brutalist-cursor a,
+    html.has-brutalist-cursor button,
+    html.has-brutalist-cursor .card,
+    html.has-brutalist-cursor .btn,
+    html.has-brutalist-cursor .status-pill {
+      cursor: none !important;
+    }
+  }
+
+  .brutalist-cursor {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--steps-small);
+  }
+
+  .brutalist-cursor.is-active {
+    opacity: 1;
+  }
+
+  .brutalist-cursor__shadow,
+  .brutalist-cursor__core {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 24px;
+    height: 24px;
+    will-change: transform, width, height;
+  }
+
+  .brutalist-cursor__shadow {
+    background: var(--color-border);
+    opacity: 0.9;
+    transition:
+      width var(--dur-fast) var(--steps-small),
+      height var(--dur-fast) var(--steps-small),
+      opacity var(--dur-fast) var(--steps-small);
+  }
+
+  .brutalist-cursor__core {
+    border: var(--border-thick);
+    background: var(--color-accent);
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:
+      width var(--dur-fast) var(--steps-small),
+      height var(--dur-fast) var(--steps-small),
+      background-color var(--dur-instant) var(--steps-micro),
+      box-shadow var(--dur-fast) var(--steps-small);
+  }
+
+  .brutalist-cursor__core-mark {
+    width: 7px;
+    height: 7px;
+    background: var(--color-border);
+  }
+
+  .brutalist-cursor[data-mode='link'] .brutalist-cursor__shadow {
+    width: 32px;
+    height: 32px;
+    opacity: 0.28;
+  }
+
+  .brutalist-cursor[data-mode='link'] .brutalist-cursor__core {
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .brutalist-cursor[data-mode='button'] .brutalist-cursor__shadow {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brutalist-cursor[data-mode='button'] .brutalist-cursor__core {
+    width: 36px;
+    height: 36px;
+    background: var(--color-accent);
+    box-shadow: 10px 10px 0px 0px var(--color-action);
+  }
+
+  .brutalist-cursor[data-mode='button'] .brutalist-cursor__core-mark {
+    width: 11px;
+    height: 11px;
+    background: var(--color-action);
+  }
+
+  .brutalist-cursor[data-mode='card'] .brutalist-cursor__shadow {
+    width: 44px;
+    height: 28px;
+    opacity: 0.38;
+  }
+
+  .brutalist-cursor[data-mode='card'] .brutalist-cursor__core {
+    width: 44px;
+    height: 28px;
+    background: var(--color-surface);
+    box-shadow: 8px 8px 0px 0px var(--color-link);
+  }
+
+  .brutalist-cursor[data-mode='card'] .brutalist-cursor__core-mark {
+    width: 18px;
+    height: 4px;
+    background: var(--color-link);
+  }
+
+  .brutalist-cursor[data-pressed='true'] .brutalist-cursor__core {
+    box-shadow: 2px 2px 0px 0px var(--color-border);
+  }
+
+  @media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+    .brutalist-cursor {
+      display: none !important;
+    }
+  }
+</style>
+
+<script>
+  function initBrutalistCursor() {
+    const runtimeWindow = window as Window & { __petshopCursorReady?: boolean };
+    if (runtimeWindow.__petshopCursorReady) return;
+
+    const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!finePointer || reducedMotion) return;
+
+    const root = document.getElementById('brutalist-cursor');
+    const core = document.getElementById('cursor-core');
+    const shadow = document.getElementById('cursor-shadow');
+    if (!root || !core || !shadow) return;
+
+    runtimeWindow.__petshopCursorReady = true;
+    document.documentElement.classList.add('has-brutalist-cursor');
+
+    let targetX = window.innerWidth / 2;
+    let targetY = window.innerHeight / 2;
+    let coreX = targetX;
+    let coreY = targetY;
+    let shadowX = targetX;
+    let shadowY = targetY;
+    let visible = false;
+    let pressed = false;
+    let mode = 'default';
+
+    const quantize = (value: number, step: number) => Math.round(value / step) * step;
+    const stepTowards = (current: number, target: number, factor: number, step: number) =>
+      quantize(current + (target - current) * factor, step);
+
+    const setVisibility = (nextVisible: boolean) => {
+      visible = nextVisible;
+      root.classList.toggle('is-active', visible);
+    };
+
+    const resolveMode = (element: Element | null) => {
+      if (!element) return 'default';
+      if (element.closest('button, .btn, [role="button"]')) return 'button';
+      if (element.closest('.card, table, .table-shell')) return 'card';
+      if (element.closest('a, .status-pill')) return 'link';
+      return 'default';
+    };
+
+    const render = () => {
+      coreX = stepTowards(coreX, targetX, mode === 'link' ? 0.24 : 0.18, 4);
+      coreY = stepTowards(coreY, targetY, mode === 'link' ? 0.24 : 0.18, 4);
+      shadowX = stepTowards(shadowX, targetX, 0.12, 8);
+      shadowY = stepTowards(shadowY, targetY, 0.12, 8);
+
+      core.style.transform = `translate3d(${coreX}px, ${coreY}px, 0) translate(-50%, -50%)`;
+      shadow.style.transform = `translate3d(${shadowX + 6}px, ${shadowY + 6}px, 0) translate(-50%, -50%)`;
+      root.dataset.mode = mode;
+      root.dataset.pressed = String(pressed);
+
+      window.requestAnimationFrame(render);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (event.pointerType && event.pointerType !== 'mouse') return;
+      targetX = event.clientX;
+      targetY = event.clientY;
+      setVisibility(true);
+      mode = resolveMode(event.target instanceof Element ? event.target : null);
+    };
+
+    const hideCursor = () => {
+      setVisibility(false);
+      pressed = false;
+      mode = 'default';
+    };
+
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    window.addEventListener('pointerdown', () => {
+      pressed = true;
+    }, { passive: true });
+    window.addEventListener('pointerup', () => {
+      pressed = false;
+    }, { passive: true });
+    window.addEventListener('blur', hideCursor);
+    document.documentElement.addEventListener('mouseleave', hideCursor);
+
+    window.requestAnimationFrame(render);
+  }
+
+  initBrutalistCursor();
+  document.addEventListener('astro:page-load', initBrutalistCursor);
+</script>

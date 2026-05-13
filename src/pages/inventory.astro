@@ -1,0 +1,152 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionIntro from '@/components/SectionIntro.astro';
+import StatusPill from '@/components/StatusPill.astro';
+import { getInventoryOverview, getLowStockAlerts, getPetInventoryView, getWarehouseSummary } from '@/data/db';
+import { formatDateTime } from '@/lib/format';
+
+const overview = await getInventoryOverview();
+const alerts = await getLowStockAlerts();
+const warehouses = await getWarehouseSummary();
+const inventoryRows = await getPetInventoryView();
+---
+
+<BaseLayout title="库存管理" description="库存、仓位和笼位视图。">
+  <PageHero
+    eyebrow="Inventory Control"
+    title="库存与仓位"
+    subtitle="inventory 表不只是数量。这里同时展示仓位、笼位和低库存预警，确认后续后台是否需要更多运维字段。"
+    panelTitle="库存概览"
+    stats={[
+      { value: overview.totalQuantity, label: '总库存量' },
+      { value: overview.totalCages, label: '笼位总数' },
+      { value: overview.lowStockCount, label: '预警项' },
+    ]}
+    tone="link"
+  >
+    <Button label="查看接口" href="/api/inventory" />
+    <Button label="查看预约" href="/preorders" variant="ghost" />
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Alerts"
+        title="库存预警"
+        description="当前规则很简单：库存数量或笼位小于等于 1 就会进入提醒面板。"
+      />
+
+      <div class="grid grid--3">
+        {alerts.map((item) => (
+          <article class="card scroll-reveal">
+            <div class="inventory-alert__top">
+              <span class="badge">{item.categoryName}</span>
+              <StatusPill status={item.quantity <= 1 ? '缺货风险' : '笼位不足'} />
+            </div>
+            <h3>{item.petName}</h3>
+            <p>{item.petSpecies} · 仓位 {item.warehouseLocation}</p>
+            <ul class="panel-list">
+              <li><span>可售数量</span><strong>{item.quantity}</strong></li>
+              <li><span>笼位数量</span><strong>{item.cageCount}</strong></li>
+              <li><span>最后更新</span><strong>{formatDateTime(item.updatedAt)}</strong></li>
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container grid grid--asymmetric">
+      <article class="card card--flat scroll-reveal">
+        <div class="table-heading">
+          <div>
+            <p class="text-label">Inventory View</p>
+            <h3>库存联表结果</h3>
+          </div>
+          <span class="badge">Mock Query</span>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>宠物</th>
+                <th>类别</th>
+                <th>数量</th>
+                <th>笼位</th>
+                <th>仓位</th>
+                <th>更新时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryRows.map((row) => (
+                <tr>
+                  <td>
+                    <strong>{row.petName}</strong>
+                    <div>{row.petSpecies}</div>
+                  </td>
+                  <td>{row.categoryName}</td>
+                  <td>{row.quantity}</td>
+                  <td>{row.cageCount}</td>
+                  <td>{row.warehouseLocation}</td>
+                  <td>{formatDateTime(row.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <aside class="inventory-sidebar">
+        <article class="card card--flat scroll-reveal">
+          <h3>仓位摘要</h3>
+          <ul class="panel-list">
+            {warehouses.map((item) => (
+              <li>
+                <div>
+                  <strong>{item.warehouseLocation}</strong>
+                  <p>{item.petCount} 个档案 / {item.categoryCount} 类</p>
+                </div>
+                <div class="inventory-sidebar__meta">
+                  <span>{item.quantity} 件</span>
+                  <span>{item.cageCount} 笼</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .inventory-alert__top,
+  .table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .inventory-sidebar {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .inventory-sidebar__meta {
+    display: grid;
+    justify-items: end;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+  }
+
+  .inventory-sidebar p {
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+  }
+</style>
+

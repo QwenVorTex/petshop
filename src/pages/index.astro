@@ -1,0 +1,392 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import MetricCard from '@/components/MetricCard.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionIntro from '@/components/SectionIntro.astro';
+import StatusPill from '@/components/StatusPill.astro';
+import {
+  apiCatalog,
+  getDashboardSnapshot,
+  getEmployeeAssignmentRows,
+  getFeaturedPets,
+  getLowStockAlerts,
+  getRecentPreorders,
+  getSpeciesDistribution,
+} from '@/data/db';
+import { formatCurrency, formatDateTime } from '@/lib/format';
+
+const snapshot = await getDashboardSnapshot();
+const featuredPets = await getFeaturedPets(3);
+const lowStockAlerts = (await getLowStockAlerts()).slice(0, 4);
+const recentPreorders = (await getRecentPreorders(4));
+const staffLoad = (await getEmployeeAssignmentRows()).slice(0, 4);
+const speciesDistribution = (await getSpeciesDistribution()).slice(0, 4);
+
+const metrics = [
+  {
+    label: '在售宠物',
+    value: snapshot.petsOnSale,
+    detail: `平均单价 ${formatCurrency(snapshot.averagePetPrice)}`,
+    tone: 'accent' as const,
+  },
+  {
+    label: '待处理预约',
+    value: snapshot.pendingPreorders,
+    detail: `${snapshot.completedPreorders} 条已完成`,
+    tone: 'link' as const,
+  },
+  {
+    label: '低库存提醒',
+    value: snapshot.lowStockCount,
+    detail: `库存总量 ${snapshot.totalInventory}`,
+    tone: 'action' as const,
+  },
+  {
+    label: '月度工资预算',
+    value: formatCurrency(snapshot.monthlyPayroll),
+    detail: `${snapshot.employeeCount} 名员工`,
+    tone: 'neutral' as const,
+  },
+];
+
+const modules = [
+  {
+    title: '页面结构先落地',
+    copy: '首页、宠物、库存、顾客、员工、预约和洞察页都已经围绕 SQL schema 的实体关系拆好了。',
+    tone: 'accent',
+  },
+  {
+    title: '接口层用 TypeScript',
+    copy: '所有接口都放在 /api 下，返回字段和页面读取逻辑对应，后续替换数据源时不用重写页面。',
+    tone: '',
+  },
+  {
+    title: '数据库延后接入',
+    copy: '当前没有创建数据库，也没有连真实后端。数据层全部集中在 mock.ts，便于后续替换。',
+    tone: 'card--link',
+  },
+];
+---
+
+<BaseLayout title="PetShop OPS" description="宠物商店系统仪表盘与业务原型页面。">
+  <PageHero
+    eyebrow="Pet Shop System Prototype"
+    title="宠物商店系统，先把界面和流程跑起来"
+    subtitle="参考 Blog 的粗野主义前端风格重新做了一个更偏业务系统的版本。当前所有数据来自 TypeScript mock layer，但页面结构已经对齐 SQL schema。"
+    panelTitle="当前运行模式"
+    panelCopy="前端视觉和接口形态已经就位。后续接入真实数据库时，可以直接替换数据层和 API 实现。"
+    stats={[
+      { value: snapshot.petCount, label: '宠物记录' },
+      { value: snapshot.customerCount, label: '顾客档案' },
+      { value: snapshot.employeeCount, label: '员工账号' },
+    ]}
+  >
+    <Button label="查看宠物档案" href="/pets" />
+    <Button label="查看接口设计" href="/insights" variant="ghost" />
+
+    <div slot="visual" class="hero-matrix" aria-hidden="true">
+      <div class="hero-matrix__cell hero-matrix__cell--accent">PET</div>
+      <div class="hero-matrix__cell hero-matrix__cell--link">STOCK</div>
+      <div class="hero-matrix__cell hero-matrix__cell--action">CRM</div>
+      <div class="hero-matrix__cell hero-matrix__cell--border">OPS</div>
+    </div>
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Dashboard"
+        title="核心指标"
+        description="把现有 schema 能支撑的关键信息先做成可视化指标，验证后台信息密度和优先级。"
+      />
+
+      <div class="grid grid--4">
+        {metrics.map((item) => (
+          <MetricCard label={item.label} value={item.value} detail={item.detail} tone={item.tone} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Pet Spotlight"
+        title="当前重点宠物"
+        description="先展示在售或高价值宠物，确认视觉卡片和业务字段的组合方式。"
+        actionLabel="进入宠物页"
+        actionHref="/pets"
+      />
+
+      <div class="grid grid--3">
+        {featuredPets.map((pet) => (
+          <article class="featured-card card scroll-reveal">
+            <div class="featured-card__top">
+              <p class="text-label">#{pet.petId} · {pet.petSpecies}</p>
+              <StatusPill status={pet.petStatus} />
+            </div>
+            <h3>{pet.petName}</h3>
+            <p class="featured-card__price">{formatCurrency(pet.petPrice)}</p>
+            <p>{pet.petColor} · {pet.petAge} 个月 · 当前负责 {pet.managers}</p>
+            <div class="featured-card__footer">
+              <span>库存 {pet.inventory?.quantity ?? 0}</span>
+              <span>仓位 {pet.inventory?.warehouseLocation ?? '待安排'}</span>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Operations"
+        title="今日运营面板"
+        description="首页不做空泛介绍，直接摆出最容易驱动动作的三个面板：库存告警、预约流转和员工负载。"
+      />
+
+      <div class="board-grid">
+        <article class="card card--flat scroll-reveal">
+          <div class="board-card__header">
+            <h3>低库存提醒</h3>
+            <span class="badge">Inventory</span>
+          </div>
+          <ul class="board-list">
+            {lowStockAlerts.map((item) => (
+              <li>
+                <div>
+                  <strong>{item.petName}</strong>
+                  <p>{item.petSpecies} · {item.warehouseLocation}</p>
+                </div>
+                <div class="board-list__meta">
+                  <StatusPill status={item.quantity <= 1 ? '缺货风险' : '笼位不足'} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article class="card card--flat scroll-reveal">
+          <div class="board-card__header">
+            <h3>最近预约</h3>
+            <span class="badge">Preorders</span>
+          </div>
+          <ul class="board-list">
+            {recentPreorders.map((item) => (
+              <li>
+                <div>
+                  <strong>{item.customerName}</strong>
+                  <p>{item.petName} · {item.petSpecies}</p>
+                </div>
+                <div class="board-list__meta">
+                  <StatusPill status={item.preorderStatus} />
+                  <span>{formatDateTime(item.preorderTime)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article class="card card--flat scroll-reveal">
+          <div class="board-card__header">
+            <h3>员工负载</h3>
+            <span class="badge">Staff</span>
+          </div>
+          <ul class="board-list">
+            {staffLoad.map((item) => (
+              <li>
+                <div>
+                  <strong>{item.employeeName}</strong>
+                  <p>{item.petLabels}</p>
+                </div>
+                <div class="board-list__meta">
+                  <span>{item.managedQty} 只</span>
+                  <span>{formatCurrency(item.salary)}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Structure"
+        title="数据结构怎么映射到站点"
+        description="站点不是临时的静态海报，而是围绕后续真实数据库接入预留了页面、接口和视图的替换点。"
+      />
+
+      <div class="grid grid--3">
+        {modules.map((item) => (
+          <article class:list={['card', item.tone, 'scroll-reveal']}>
+            <h3>{item.title}</h3>
+            <p>{item.copy}</p>
+          </article>
+        ))}
+      </div>
+
+      <div class="api-strip card card--flat scroll-reveal">
+        <div>
+          <p class="text-label">API Preview</p>
+          <h3>已经准备好的接口</h3>
+        </div>
+        <div class="api-strip__links">
+          {apiCatalog.slice(0, 3).map((item) => (
+            <a href={item.path}>{item.path}</a>
+          ))}
+        </div>
+        <div class="api-strip__species">
+          {speciesDistribution.map((item) => (
+            <span>{item.species} × {item.count}</span>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero-matrix {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+    gap: var(--space-4);
+    width: min(100%, 320px);
+  }
+
+  .hero-matrix__cell {
+    border: var(--border-thick);
+    box-shadow: var(--shadow-lg);
+    min-height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 900;
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .hero-matrix__cell--accent {
+    background: var(--color-accent);
+  }
+
+  .hero-matrix__cell--link {
+    background: var(--color-link);
+    color: var(--color-surface);
+  }
+
+  .hero-matrix__cell--action {
+    background: var(--color-action);
+    color: var(--color-surface);
+  }
+
+  .hero-matrix__cell--border {
+    background: var(--color-border);
+    color: var(--color-surface);
+  }
+
+  .featured-card__top,
+  .board-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .featured-card__price {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 900;
+    margin-bottom: var(--space-2);
+  }
+
+  .featured-card__footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+  }
+
+  .board-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-6);
+  }
+
+  .board-list {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .board-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-bottom: var(--space-4);
+    border-bottom: var(--border-medium);
+  }
+
+  .board-list li:last-child {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .board-list strong {
+    display: block;
+    margin-bottom: var(--space-2);
+  }
+
+  .board-list p {
+    margin-bottom: 0;
+    color: var(--color-text-muted);
+  }
+
+  .board-list__meta {
+    display: grid;
+    justify-items: end;
+    gap: var(--space-2);
+    text-align: right;
+    font-size: var(--text-sm);
+  }
+
+  .api-strip {
+    margin-top: var(--space-10);
+    display: grid;
+    grid-template-columns: 1.1fr 1fr 1fr;
+    gap: var(--space-6);
+    align-items: start;
+  }
+
+  .api-strip h3 {
+    margin-bottom: 0;
+  }
+
+  .api-strip__links,
+  .api-strip__species {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .api-strip__links a,
+  .api-strip__species span {
+    padding: var(--space-3);
+    border: var(--border-medium);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  @media (max-width: 1024px) {
+    .board-grid,
+    .api-strip {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+

@@ -1,0 +1,178 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionIntro from '@/components/SectionIntro.astro';
+import StatusPill from '@/components/StatusPill.astro';
+import {
+  getDashboardSnapshot,
+  getFeaturedPets,
+  getPetInventoryView,
+  getPetStatusBreakdown,
+  getSpeciesDistribution,
+} from '@/data/db';
+import { formatCurrency, formatDateTime } from '@/lib/format';
+
+const snapshot = await getDashboardSnapshot();
+const featuredPets = await getFeaturedPets(6);
+const petRows = await getPetInventoryView();
+const statusBreakdown = await getPetStatusBreakdown();
+const speciesDistribution = await getSpeciesDistribution();
+---
+
+<BaseLayout title="宠物档案" description="宠物商店系统中的宠物档案、状态和库存关联视图。">
+  <PageHero
+    eyebrow="Pet Catalog"
+    title="宠物档案"
+    subtitle="把 pet 表和 inventory 表一起看，更接近真实业务管理场景。这个页面优先验证宠物卡片、状态标记和联表后的表格密度。"
+    panelTitle="宠物概览"
+    stats={[
+      { value: snapshot.petCount, label: '总宠物数' },
+      { value: snapshot.petsOnSale, label: '在售中' },
+      { value: formatCurrency(snapshot.averagePetPrice), label: '平均单价' },
+    ]}
+  >
+    <Button label="查看库存页" href="/inventory" />
+    <Button label="接口 /api/pets" href="/api/pets" variant="ghost" />
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Cards"
+        title="重点宠物卡片"
+        description="这些卡片同时承接了 pet、inventory 和 employee_pet_manage 三张表的关键信息。"
+      />
+
+      <div class="grid grid--brutalist">
+        {featuredPets.map((pet) => (
+          <article class="card pet-card scroll-reveal">
+            <div class="pet-card__top">
+              <span class="badge">{pet.petSpecies}</span>
+              <StatusPill status={pet.petStatus} />
+            </div>
+            <h3>{pet.petName}</h3>
+            <p class="pet-card__price">{formatCurrency(pet.petPrice)}</p>
+            <p>{pet.petColor} · {pet.petAge} 个月</p>
+            <ul class="pet-card__meta">
+              <li><strong>库存</strong><span>{pet.inventory?.quantity ?? 0}</span></li>
+              <li><strong>仓位</strong><span>{pet.inventory?.warehouseLocation ?? '待安排'}</span></li>
+              <li><strong>负责员工</strong><span>{pet.managers}</span></li>
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container grid grid--asymmetric">
+      <article class="card card--flat scroll-reveal">
+        <div class="table-heading">
+          <div>
+            <p class="text-label">Joined View</p>
+            <h3>宠物与库存联表</h3>
+          </div>
+          <span class="badge">v_pet_inventory</span>
+        </div>
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>宠物</th>
+                <th>状态</th>
+                <th>价格</th>
+                <th>库存</th>
+                <th>仓位</th>
+                <th>更新时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {petRows.map((row) => (
+                <tr>
+                  <td>
+                    <strong>{row.petName}</strong>
+                    <div>{row.petSpecies} · {row.petColor}</div>
+                  </td>
+                  <td><StatusPill status={row.petStatus} /></td>
+                  <td>{formatCurrency(row.petPrice)}</td>
+                  <td>{row.quantity} / 笼位 {row.cageCount}</td>
+                  <td>{row.warehouseLocation}</td>
+                  <td>{formatDateTime(row.updatedAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <aside class="pet-sidebar">
+        <article class="card card--flat scroll-reveal">
+          <h3>状态分布</h3>
+          <ul class="panel-list">
+            {statusBreakdown.map((item) => (
+              <li>
+                <span>{item.status}</span>
+                <strong>{item.count}</strong>
+              </li>
+            ))}
+          </ul>
+        </article>
+
+        <article class="card card--accent scroll-reveal">
+          <h3>品类密度</h3>
+          <ul class="panel-list">
+            {speciesDistribution.map((item) => (
+              <li>
+                <span>{item.species}</span>
+                <strong>{item.count}</strong>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </aside>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .pet-card__top,
+  .table-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .pet-card__price {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    font-weight: 900;
+    margin-bottom: var(--space-2);
+  }
+
+  .pet-card__meta {
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  .pet-card__meta li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-bottom: var(--space-2);
+    border-bottom: var(--border-medium);
+  }
+
+  .pet-card__meta li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .pet-sidebar {
+    display: grid;
+    gap: var(--space-6);
+  }
+</style>
+

@@ -1,0 +1,115 @@
+---
+import BaseLayout from '@/layouts/BaseLayout.astro';
+import Button from '@/components/Button.astro';
+import PageHero from '@/components/PageHero.astro';
+import SectionIntro from '@/components/SectionIntro.astro';
+import StatusPill from '@/components/StatusPill.astro';
+import { getCustomerReservationRows } from '@/data/db';
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/format';
+
+const customerRows = await getCustomerReservationRows();
+const activeCustomers = customerRows.filter((item) => item.activeReservationCount > 0).length;
+const totalCompletedValue = customerRows.reduce((sum, item) => sum + item.completedValue, 0);
+const latestCustomer = customerRows.reduce((latest, current) =>
+  Date.parse(current.createdAt) > Date.parse(latest.createdAt) ? current : latest,
+);
+---
+
+<BaseLayout title="顾客管理" description="顾客档案与预约关系页面。">
+  <PageHero
+    eyebrow="Customer CRM"
+    title="顾客与预约关系"
+    subtitle="顾客页不只放联系方式，还把预约状态和意向宠物一起展示，后续可直接扩展为 CRM 流程。"
+    panelTitle="顾客概览"
+    stats={[
+      { value: customerRows.length, label: '顾客总数' },
+      { value: activeCustomers, label: '活跃预约顾客' },
+      { value: formatCurrency(totalCompletedValue), label: '已完成成交额' },
+    ]}
+    tone="action"
+  >
+    <Button label="查看接口" href="/api/customers" />
+    <Button label="查看预约页" href="/preorders" variant="ghost" />
+  </PageHero>
+
+  <section class="section">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Customer Cards"
+        title="当前顾客概览"
+        description={`最新录入顾客为 ${latestCustomer.customerName}，注册时间 ${formatDate(latestCustomer.createdAt)}。`}
+      />
+
+      <div class="grid grid--3">
+        {customerRows.map((customer) => (
+          <article class="card scroll-reveal">
+            <div class="customer-card__top">
+              <span class="badge">#{customer.customerId}</span>
+              <StatusPill status={customer.latestStatus} />
+            </div>
+            <h3>{customer.customerName}</h3>
+            <p>{customer.phone}</p>
+            <ul class="panel-list">
+              <li><span>活跃预约</span><strong>{customer.activeReservationCount}</strong></li>
+              <li><span>累计预约</span><strong>{customer.reservationCount}</strong></li>
+              <li><span>意向宠物</span><strong>{customer.interestedPets}</strong></li>
+            </ul>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--compact">
+    <div class="container">
+      <SectionIntro
+        eyebrow="Table"
+        title="顾客与预约明细"
+        description="这里保留了最适合未来映射数据库查询结果的表格结构。"
+      />
+
+      <article class="card card--flat scroll-reveal">
+        <div class="table-shell">
+          <table>
+            <thead>
+              <tr>
+                <th>顾客</th>
+                <th>电话</th>
+                <th>最近预约</th>
+                <th>状态</th>
+                <th>预约数</th>
+                <th>已完成成交额</th>
+              </tr>
+            </thead>
+            <tbody>
+              {customerRows.map((customer) => (
+                <tr>
+                  <td>
+                    <strong>{customer.customerName}</strong>
+                    <div>{customer.interestedPets}</div>
+                  </td>
+                  <td>{customer.phone}</td>
+                  <td>{formatDateTime(customer.lastReservationTime)}</td>
+                  <td><StatusPill status={customer.latestStatus} /></td>
+                  <td>{customer.reservationCount}</td>
+                  <td>{formatCurrency(customer.completedValue)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .customer-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+</style>
+

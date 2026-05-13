@@ -1,0 +1,257 @@
+---
+interface HeroStat {
+  value: string | number;
+  label: string;
+}
+
+interface Props {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  panelTitle?: string;
+  panelCopy?: string;
+  stats: HeroStat[];
+  tone?: 'accent' | 'action' | 'link';
+}
+
+const {
+  eyebrow,
+  title,
+  subtitle,
+  panelTitle = '页面概览',
+  panelCopy = '当前页面仍然使用 mock data。未来替换数据源时，只需要接管同名字段和接口。',
+  stats,
+  tone = 'accent',
+} = Astro.props;
+
+const toneClass = tone === 'action' ? 'card--action' : tone === 'link' ? 'card--link' : 'card--accent';
+const cells = Array.from({ length: 6 }, (_, index) => index);
+---
+
+<section class="page-hero" data-cursor-zone="hero">
+  <div class="container page-hero__grid">
+    <div class="page-hero__copy">
+      <p class="text-label page-hero__eyebrow anim-enter">{eyebrow}</p>
+      <h1 class="page-hero__title anim-enter anim-delay-1">{title}</h1>
+      <p class="page-hero__subtitle anim-enter anim-delay-2">{subtitle}</p>
+      {Astro.slots.has('default') && (
+        <div class="page-hero__actions anim-enter anim-delay-3">
+          <slot />
+        </div>
+      )}
+    </div>
+
+    <div class="page-hero__side">
+      <div class="page-hero__visual anim-enter anim-delay-2">
+        {Astro.slots.has('visual') ? (
+          <slot name="visual" />
+        ) : (
+          <div class="page-hero__pixel-grid" aria-hidden="true">
+            {cells.map((cell) => <span class={`page-hero__pixel page-hero__pixel--${cell + 1}`}></span>)}
+          </div>
+        )}
+      </div>
+
+      <aside class:list={['page-hero__panel', 'card', toneClass, 'anim-enter', 'anim-delay-3']}>
+        <span class="badge">{panelTitle}</span>
+        <ul class="page-hero__stats">
+          {stats.map((item) => (
+            <li>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+            </li>
+          ))}
+        </ul>
+        <p class="page-hero__panel-copy">{panelCopy}</p>
+      </aside>
+    </div>
+  </div>
+  <div class="page-hero__bar" aria-hidden="true"></div>
+</section>
+
+<style>
+  .page-hero {
+    border-bottom: var(--border-thick);
+  }
+
+  .page-hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+    gap: var(--space-10);
+    align-items: start;
+    padding-top: var(--space-16);
+    padding-bottom: var(--space-12);
+  }
+
+  .page-hero__eyebrow {
+    margin-bottom: var(--space-4);
+  }
+
+  .page-hero__title {
+    max-width: 11ch;
+    margin-bottom: var(--space-6);
+  }
+
+  .page-hero__subtitle {
+    font-size: var(--text-lg);
+    color: var(--color-text-muted);
+    max-width: 48ch;
+  }
+
+  .page-hero__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .page-hero__side {
+    display: grid;
+    gap: var(--space-6);
+  }
+
+  .page-hero__visual {
+    border: var(--border-thick);
+    background:
+      linear-gradient(135deg, rgba(var(--color-border-rgb), 0.04) 25%, transparent 25%) -12px 0 / 24px 24px,
+      linear-gradient(225deg, rgba(var(--color-border-rgb), 0.03) 25%, transparent 25%) -12px 0 / 24px 24px,
+      var(--color-surface);
+    box-shadow: var(--shadow-lg);
+    padding: var(--space-6);
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .page-hero__pixel-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+    width: min(100%, 320px);
+  }
+
+  .page-hero__pixel {
+    aspect-ratio: 1;
+    border: var(--border-thick);
+    box-shadow: var(--shadow-lg);
+    animation: hero-block-drift 4.8s steps(5, end) infinite;
+  }
+
+  .page-hero__pixel--1 {
+    background: var(--color-accent);
+    transform: rotate(-2deg);
+  }
+
+  .page-hero__pixel--2 {
+    background: var(--color-link);
+    transform: translateY(12px) rotate(1deg);
+    animation-delay: 0.2s;
+  }
+
+  .page-hero__pixel--3 {
+    background: var(--color-action);
+    transform: rotate(-1deg);
+    animation-delay: 0.4s;
+  }
+
+  .page-hero__pixel--4 {
+    background: var(--color-border);
+    animation-delay: 0.7s;
+  }
+
+  .page-hero__pixel--5 {
+    background: var(--color-surface);
+    transform: translateY(-8px) rotate(-1deg);
+    animation-delay: 0.9s;
+  }
+
+  .page-hero__pixel--6 {
+    background: var(--color-accent);
+    animation-delay: 1.1s;
+  }
+
+  .page-hero__stats {
+    list-style: none;
+    margin: var(--space-6) 0;
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .page-hero__stats li {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: var(--border-medium);
+  }
+
+  .page-hero__stats strong {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+  }
+
+  .page-hero__stats span {
+    align-self: end;
+    text-align: right;
+    opacity: 0.88;
+  }
+
+  .page-hero__panel-copy {
+    margin-bottom: 0;
+  }
+
+  .page-hero__bar {
+    height: 8px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-border) 0px,
+      var(--color-border) 18px,
+      var(--color-accent) 18px,
+      var(--color-accent) 36px,
+      var(--color-link) 36px,
+      var(--color-link) 54px,
+      var(--color-action) 54px,
+      var(--color-action) 72px
+    );
+  }
+
+  @keyframes hero-block-drift {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+
+    25% {
+      transform: translate(6px, -8px) rotate(2deg);
+    }
+
+    50% {
+      transform: translate(-6px, -4px) rotate(-2deg);
+    }
+
+    75% {
+      transform: translate(8px, 8px) rotate(1deg);
+    }
+
+    100% {
+      transform: translate(0, 0) rotate(0deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .page-hero__grid {
+      grid-template-columns: 1fr;
+      padding-top: var(--space-10);
+    }
+
+    .page-hero__visual {
+      min-height: 220px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .page-hero__pixel {
+      animation: none;
+    }
+  }
+</style>
+

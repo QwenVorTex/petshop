@@ -1,0 +1,389 @@
+---
+import { siteConfig } from '@/config/site';
+
+const navItems = siteConfig.navigation.primary;
+const dropdownItems = siteConfig.navigation.secondary;
+
+const currentPath = Astro.url.pathname;
+const isDropdownActive = dropdownItems.some((item) => currentPath === item.href);
+---
+
+<header class="site-header">
+  <div class="site-header__inner container">
+    <a href="/" class="site-header__logo" aria-label="返回首页">
+      <span class="site-header__logo-block"></span>
+      <span class="site-header__logo-text">{siteConfig.shortName}</span>
+    </a>
+
+    <nav class="site-header__nav" aria-label="主导航">
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={['site-header__link', { 'is-active': currentPath === item.href }]}
+          aria-current={currentPath === item.href ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+
+      <div class="site-header__dropdown" data-dropdown-root>
+        <button
+          class:list={['site-header__link site-header__dropdown-trigger', { 'is-active': isDropdownActive }]}
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="header-more-menu"
+          type="button"
+          id="header-more-trigger"
+        >
+          更多 <span class="site-header__caret" aria-hidden="true">▾</span>
+        </button>
+        <div class="site-header__dropdown-menu" id="header-more-menu">
+          {dropdownItems.map((item) => (
+            <a
+              href={item.href}
+              class:list={['site-header__dropdown-item', { 'is-active': currentPath === item.href }]}
+              aria-current={currentPath === item.href ? 'page' : undefined}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </nav>
+
+    <button
+      class="site-header__burger"
+      aria-label="打开菜单"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+      id="nav-toggle"
+      type="button"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </div>
+
+  <div class="site-header__mobile-menu" id="mobile-menu" hidden>
+    <nav>
+      {navItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={['site-header__mobile-link', { 'is-active': currentPath === item.href }]}
+          aria-current={currentPath === item.href ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+      <div class="site-header__mobile-divider"></div>
+      {dropdownItems.map((item) => (
+        <a
+          href={item.href}
+          class:list={['site-header__mobile-link', { 'is-active': currentPath === item.href }]}
+          aria-current={currentPath === item.href ? 'page' : undefined}
+        >
+          {item.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: var(--z-header);
+    background: rgba(var(--color-base-rgb), 0.97);
+    backdrop-filter: blur(8px);
+    border-bottom: var(--border-thick);
+    height: var(--header-height);
+    display: flex;
+    align-items: center;
+  }
+
+  .site-header__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+  }
+
+  .site-header__logo {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    text-decoration: none;
+    color: var(--color-text);
+  }
+
+  .site-header__logo:hover {
+    text-decoration: none;
+    color: var(--color-text);
+  }
+
+  .site-header__logo-block {
+    display: block;
+    width: 32px;
+    height: 32px;
+    background: var(--color-border);
+    transition: transform var(--dur-fast) var(--steps-small);
+  }
+
+  .site-header__logo:hover .site-header__logo-block {
+    transform: rotate(45deg);
+    background: var(--color-action);
+  }
+
+  .site-header__logo-text {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    font-weight: 900;
+    letter-spacing: var(--tracking-tight);
+    text-transform: uppercase;
+  }
+
+  .site-header__nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .site-header__link {
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    padding: var(--space-2) var(--space-4);
+    color: var(--color-text);
+    text-decoration: none;
+    border: 2px solid transparent;
+    transition:
+      transform var(--dur-instant) var(--steps-micro),
+      background-color var(--dur-instant) var(--steps-micro),
+      color var(--dur-instant) var(--steps-micro),
+      border-color var(--dur-instant) var(--steps-micro),
+      box-shadow var(--dur-instant) var(--steps-micro);
+  }
+
+  .site-header__link:hover {
+    border-color: var(--color-border);
+    background: var(--color-accent);
+    color: var(--color-text);
+    text-decoration: none;
+    transform: translate(-2px, -2px);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .site-header__link.is-active {
+    background: var(--color-border);
+    color: var(--color-surface);
+    border-color: var(--color-border);
+  }
+
+  .site-header__dropdown {
+    position: relative;
+  }
+
+  .site-header__dropdown-trigger {
+    background: none;
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .site-header__caret {
+    font-size: 0.7em;
+    transition: transform var(--dur-fast) var(--steps-small);
+  }
+
+  .site-header__dropdown:hover .site-header__caret,
+  .site-header__dropdown:focus-within .site-header__caret,
+  .site-header__dropdown.is-open .site-header__caret {
+    transform: rotate(180deg);
+  }
+
+  .site-header__dropdown-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 140px;
+    background: var(--color-base);
+    border: var(--border-thick);
+    box-shadow: var(--shadow-lg);
+    z-index: var(--z-overlay);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4px);
+    pointer-events: none;
+    transition:
+      opacity var(--dur-fast) var(--steps-small),
+      transform var(--dur-fast) var(--steps-small),
+      visibility 0s linear var(--dur-fast);
+  }
+
+  .site-header__dropdown:hover .site-header__dropdown-menu,
+  .site-header__dropdown:focus-within .site-header__dropdown-menu,
+  .site-header__dropdown.is-open .site-header__dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    pointer-events: auto;
+    transition:
+      opacity var(--dur-fast) var(--steps-small),
+      transform var(--dur-fast) var(--steps-small),
+      visibility 0s linear 0s;
+  }
+
+  .site-header__dropdown-item {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-sm);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .site-header__dropdown-item:hover {
+    background: var(--color-accent);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .site-header__dropdown-item.is-active {
+    background: var(--color-border);
+    color: var(--color-surface);
+  }
+
+  .site-header__mobile-divider {
+    height: 4px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--color-border) 0px,
+      var(--color-border) 12px,
+      var(--color-accent) 12px,
+      var(--color-accent) 24px,
+      var(--color-action) 24px,
+      var(--color-action) 36px,
+      var(--color-link) 36px,
+      var(--color-link) 48px
+    );
+    margin: var(--space-4) 0;
+  }
+
+  .site-header__burger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    padding: var(--space-2);
+  }
+
+  .site-header__burger span {
+    display: block;
+    width: 28px;
+    height: 3px;
+    background: var(--color-border);
+  }
+
+  .site-header__mobile-menu {
+    display: none;
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--color-base);
+    z-index: var(--z-overlay);
+    border-top: var(--border-thick);
+    padding: var(--space-8);
+  }
+
+  .site-header__mobile-menu.is-open {
+    display: block;
+  }
+
+  .site-header__mobile-link {
+    display: block;
+    font-family: var(--font-display);
+    font-size: var(--text-3xl);
+    font-weight: 900;
+    text-transform: uppercase;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: var(--space-4) 0;
+    border-bottom: var(--border-medium);
+  }
+
+  .site-header__mobile-link:hover,
+  .site-header__mobile-link.is-active {
+    color: var(--color-action);
+  }
+
+  @media (max-width: 768px) {
+    .site-header__nav {
+      display: none;
+    }
+
+    .site-header__burger {
+      display: flex;
+    }
+  }
+</style>
+
+<script>
+  function initHeader() {
+    const toggle = document.getElementById('nav-toggle');
+    const menu = document.getElementById('mobile-menu');
+    const dropdownRoot = document.querySelector('[data-dropdown-root]');
+    const dropdownTrigger = document.getElementById('header-more-trigger');
+
+    if (!toggle || !menu || toggle.dataset.ready === 'true') return;
+    toggle.dataset.ready = 'true';
+
+    const setMenuOpen = (open: boolean) => {
+      menu.hidden = !open;
+      menu.classList.toggle('is-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? '关闭菜单' : '打开菜单');
+    };
+
+    const setDropdownOpen = (open: boolean) => {
+      if (!dropdownRoot || !dropdownTrigger) return;
+      dropdownRoot.classList.toggle('is-open', open);
+      dropdownTrigger.setAttribute('aria-expanded', String(open));
+    };
+
+    toggle.addEventListener('click', () => {
+      setMenuOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    dropdownTrigger?.addEventListener('click', () => {
+      setDropdownOpen(dropdownTrigger.getAttribute('aria-expanded') !== 'true');
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!(event.target instanceof Node)) return;
+      if (dropdownRoot && !dropdownRoot.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+      if (!toggle.contains(event.target) && !menu.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        setDropdownOpen(false);
+        setMenuOpen(false);
+      }
+    });
+  }
+
+  initHeader();
+  document.addEventListener('astro:page-load', initHeader);
+</script>

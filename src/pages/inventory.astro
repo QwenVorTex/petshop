@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import Modal from '@/components/Modal.astro';
 import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import StatusPill from '@/components/StatusPill.astro';
@@ -26,7 +27,8 @@ const inventoryRows = await getPetInventoryView();
     ]}
     tone="link"
   >
-    <Button label="查看预约" href="/preorders" />
+    <button class="btn btn--primary" id="btn-add-inventory">添加库存</button>
+    <Button label="查看预约" href="/preorders" variant="ghost" />
   </PageHero>
 
   <section class="section">
@@ -51,6 +53,10 @@ const inventoryRows = await getPetInventoryView();
               <li><span>笼位数量</span><strong>{item.cageCount}</strong></li>
               <li><span>最后更新</span><strong>{formatDateTime(item.updatedAt)}</strong></li>
             </ul>
+            <div class="card-actions">
+              <button class="btn btn--sm btn-edit-inventory" data-inventory={JSON.stringify(item)}>编辑</button>
+              <button class="btn btn--sm btn--danger btn-delete-inventory" data-inventory-id={item.inventoryId} data-pet-name={item.petName}>删除</button>
+            </div>
           </article>
         ))}
       </div>
@@ -77,6 +83,7 @@ const inventoryRows = await getPetInventoryView();
                 <th>笼位</th>
                 <th>仓位</th>
                 <th>更新时间</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -91,6 +98,11 @@ const inventoryRows = await getPetInventoryView();
                   <td>{row.cageCount}</td>
                   <td>{row.warehouseLocation}</td>
                   <td>{formatDateTime(row.updatedAt)}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn btn--sm btn-edit-inventory-row" data-inventory={JSON.stringify(row)}>编辑</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -119,6 +131,54 @@ const inventoryRows = await getPetInventoryView();
       </aside>
     </div>
   </section>
+
+  <!-- 添加/编辑库存模态框 -->
+  <Modal id="inventory-modal" title="添加库存">
+    <form id="inventory-form">
+      <input type="hidden" id="inventory-id" name="inventoryId" />
+      <div class="form-group">
+        <label for="inventory-pet-id">宠物ID *</label>
+        <input type="number" id="inventory-pet-id" name="petId" min="1" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inventory-category">类别名称 *</label>
+          <input type="text" id="inventory-category" name="categoryName" required />
+        </div>
+        <div class="form-group">
+          <label for="inventory-quantity">库存数量 *</label>
+          <input type="number" id="inventory-quantity" name="quantity" min="0" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inventory-location">仓位</label>
+          <input type="text" id="inventory-location" name="warehouseLocation" />
+        </div>
+        <div class="form-group">
+          <label for="inventory-cage-count">笼位数量</label>
+          <input type="number" id="inventory-cage-count" name="cageCount" min="0" />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close="inventory-modal">取消</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- 删除确认对话框 -->
+  <div id="confirm-dialog" class="confirm-dialog" hidden>
+    <div class="confirm-dialog__backdrop"></div>
+    <div class="confirm-dialog__content">
+      <h4>确认删除</h4>
+      <p id="confirm-message">确定要删除该库存记录吗？</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" id="confirm-cancel">取消</button>
+        <button class="btn btn--danger" id="confirm-ok">删除</button>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -147,5 +207,154 @@ const inventoryRows = await getPetInventoryView();
     margin-bottom: 0;
     color: var(--color-text-muted);
   }
+
+  .table-actions {
+    display: flex;
+    gap: var(--space-2);
+  }
 </style>
 
+<script>
+  // 模态框控制
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = false;
+  }
+
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = true;
+  }
+
+  // 确认对话框
+  let confirmCallback: (() => void) | null = null;
+
+  function showConfirm(message: string, callback: () => void) {
+    const dialog = document.getElementById('confirm-dialog');
+    const msg = document.getElementById('confirm-message');
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.hidden = false;
+      confirmCallback = callback;
+    }
+  }
+
+  function hideConfirm() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) dialog.hidden = true;
+    confirmCallback = null;
+  }
+
+  // 关闭模态框按钮
+  document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.getAttribute('data-modal-close');
+      if (modalId) closeModal(modalId);
+    });
+  });
+
+  // 背景点击关闭模态框
+  document.querySelectorAll('.modal__backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', () => {
+      const modal = backdrop.closest('.modal');
+      if (modal) (modal as HTMLElement).hidden = true;
+    });
+  });
+
+  // 添加库存按钮
+  document.getElementById('btn-add-inventory')?.addEventListener('click', () => {
+    const form = document.getElementById('inventory-form') as HTMLFormElement;
+    form.reset();
+    (document.getElementById('inventory-id') as HTMLInputElement).value = '';
+    const modal = document.getElementById('inventory-modal');
+    if (modal) {
+      modal.querySelector('h3')!.textContent = '添加库存';
+    }
+    openModal('inventory-modal');
+  });
+
+  // 编辑库存按钮
+  function setupEditButtons() {
+    document.querySelectorAll('.btn-edit-inventory, .btn-edit-inventory-row').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const inventory = JSON.parse(btn.getAttribute('data-inventory') || '{}');
+        (document.getElementById('inventory-id') as HTMLInputElement).value = inventory.inventoryId || '';
+        (document.getElementById('inventory-pet-id') as HTMLInputElement).value = inventory.petId || '';
+        (document.getElementById('inventory-category') as HTMLInputElement).value = inventory.categoryName || '';
+        (document.getElementById('inventory-quantity') as HTMLInputElement).value = inventory.quantity || '';
+        (document.getElementById('inventory-location') as HTMLInputElement).value = inventory.warehouseLocation || '';
+        (document.getElementById('inventory-cage-count') as HTMLInputElement).value = inventory.cageCount || '';
+        const modal = document.getElementById('inventory-modal');
+        if (modal) {
+          modal.querySelector('h3')!.textContent = '编辑库存';
+        }
+        openModal('inventory-modal');
+      });
+    });
+  }
+  setupEditButtons();
+
+  // 删除库存按钮
+  document.querySelectorAll('.btn-delete-inventory').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const inventoryId = btn.getAttribute('data-inventory-id');
+      const petName = btn.getAttribute('data-pet-name');
+      showConfirm(`确定要删除"${petName}"的库存记录吗？`, async () => {
+        try {
+          const res = await fetch('/api/inventory', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inventoryId: Number(inventoryId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('删除失败：' + (data.message || '未知错误'));
+          }
+        } catch (err) {
+          alert('删除失败：网络错误');
+        }
+      });
+    });
+  });
+
+  // 确认对话框按钮
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    hideConfirm();
+  });
+
+  document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirm);
+  document.getElementById('confirm-dialog')?.querySelector('.confirm-dialog__backdrop')?.addEventListener('click', hideConfirm);
+
+  // 表单提交
+  document.getElementById('inventory-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const inventoryId = (document.getElementById('inventory-id') as HTMLInputElement).value;
+    const data = {
+      petId: Number((document.getElementById('inventory-pet-id') as HTMLInputElement).value),
+      categoryName: (document.getElementById('inventory-category') as HTMLInputElement).value,
+      quantity: Number((document.getElementById('inventory-quantity') as HTMLInputElement).value),
+      warehouseLocation: (document.getElementById('inventory-location') as HTMLInputElement).value || null,
+      cageCount: (document.getElementById('inventory-cage-count') as HTMLInputElement).value ? Number((document.getElementById('inventory-cage-count') as HTMLInputElement).value) : 0,
+    };
+
+    try {
+      const res = await fetch('/api/inventory', {
+        method: inventoryId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inventoryId ? { ...data, inventoryId: Number(inventoryId) } : data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        closeModal('inventory-modal');
+        window.location.reload();
+      } else {
+        alert('保存失败：' + (result.message || '未知错误'));
+      }
+    } catch (err) {
+      alert('保存失败：网络错误');
+    }
+  });
+</script>

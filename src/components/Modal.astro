@@ -1,0 +1,90 @@
+---
+interface Props {
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+---
+
+<div id={id} class="modal" hidden>
+  <div class="modal__backdrop"></div>
+  <div class="modal__content">
+    <div class="modal__header">
+      <h3>{title}</h3>
+      <button class="modal__close" data-modal-close={id}>&times;</button>
+    </div>
+    <div class="modal__body">
+      <slot />
+    </div>
+  </div>
+</div>
+
+<style>
+  .modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6);
+  }
+
+  .modal[hidden] {
+    display: none;
+  }
+
+  .modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+  }
+
+  .modal__content {
+    position: relative;
+    background: var(--color-surface);
+    border: var(--border-thick);
+    box-shadow: 12px 12px 0px 0px var(--color-border);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-4) var(--space-6);
+    border-bottom: var(--border-thick);
+  }
+
+  .modal__header h3 {
+    margin: 0;
+    font-family: var(--font-display);
+    font-size: var(--text-lg);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+
+  .modal__close {
+    background: none;
+    border: none;
+    font-size: var(--text-2xl);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    color: var(--color-text);
+    transition: transform var(--dur-fast) var(--steps-small);
+  }
+
+  .modal__close:hover {
+    transform: scale(1.2);
+  }
+
+  .modal__body {
+    padding: var(--space-6);
+  }
+</style>

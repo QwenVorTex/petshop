@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import Modal from '@/components/Modal.astro';
 import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import StatusPill from '@/components/StatusPill.astro';
@@ -28,7 +29,8 @@ const latestCustomer = customerRows.reduce((latest, current) =>
     ]}
     tone="action"
   >
-    <Button label="查看预约页" href="/preorders" />
+    <button class="btn btn--primary" id="btn-add-customer">添加顾客</button>
+    <Button label="查看预约页" href="/preorders" variant="ghost" />
   </PageHero>
 
   <section class="section">
@@ -41,7 +43,7 @@ const latestCustomer = customerRows.reduce((latest, current) =>
 
       <div class="grid grid--3">
         {customerRows.map((customer) => (
-          <article class="card scroll-reveal">
+          <article class="card scroll-reveal" data-customer-id={customer.customerId}>
             <div class="customer-card__top">
               <span class="badge">#{customer.customerId}</span>
               <StatusPill status={customer.latestStatus} />
@@ -53,6 +55,10 @@ const latestCustomer = customerRows.reduce((latest, current) =>
               <li><span>累计预约</span><strong>{customer.reservationCount}</strong></li>
               <li><span>意向宠物</span><strong>{customer.interestedPets}</strong></li>
             </ul>
+            <div class="card-actions">
+              <button class="btn btn--sm btn-edit-customer" data-customer={JSON.stringify(customer)}>编辑</button>
+              <button class="btn btn--sm btn--danger btn-delete-customer" data-customer-id={customer.customerId} data-customer-name={customer.customerName}>删除</button>
+            </div>
           </article>
         ))}
       </div>
@@ -100,6 +106,42 @@ const latestCustomer = customerRows.reduce((latest, current) =>
       </article>
     </div>
   </section>
+
+  <!-- 添加/编辑顾客模态框 -->
+  <Modal id="customer-modal" title="添加顾客">
+    <form id="customer-form">
+      <input type="hidden" id="customer-id" name="customerId" />
+      <div class="form-group">
+        <label for="customer-name">姓名 *</label>
+        <input type="text" id="customer-name" name="customerName" required />
+      </div>
+      <div class="form-group">
+        <label for="customer-phone">电话 *</label>
+        <input type="tel" id="customer-phone" name="phone" required />
+      </div>
+      <div class="form-group">
+        <label for="customer-id-card">身份证号 *</label>
+        <input type="text" id="customer-id-card" name="idCard" maxlength="18" required />
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close="customer-modal">取消</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- 删除确认对话框 -->
+  <div id="confirm-dialog" class="confirm-dialog" hidden>
+    <div class="confirm-dialog__backdrop"></div>
+    <div class="confirm-dialog__content">
+      <h4>确认删除</h4>
+      <p id="confirm-message">确定要删除该顾客吗？</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" id="confirm-cancel">取消</button>
+        <button class="btn btn--danger" id="confirm-ok">删除</button>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -112,3 +154,140 @@ const latestCustomer = customerRows.reduce((latest, current) =>
   }
 </style>
 
+<script>
+  // 模态框控制
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = false;
+  }
+
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = true;
+  }
+
+  // 确认对话框
+  let confirmCallback: (() => void) | null = null;
+
+  function showConfirm(message: string, callback: () => void) {
+    const dialog = document.getElementById('confirm-dialog');
+    const msg = document.getElementById('confirm-message');
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.hidden = false;
+      confirmCallback = callback;
+    }
+  }
+
+  function hideConfirm() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) dialog.hidden = true;
+    confirmCallback = null;
+  }
+
+  // 关闭模态框按钮
+  document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.getAttribute('data-modal-close');
+      if (modalId) closeModal(modalId);
+    });
+  });
+
+  // 背景点击关闭模态框
+  document.querySelectorAll('.modal__backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', () => {
+      const modal = backdrop.closest('.modal');
+      if (modal) (modal as HTMLElement).hidden = true;
+    });
+  });
+
+  // 添加顾客按钮
+  document.getElementById('btn-add-customer')?.addEventListener('click', () => {
+    const form = document.getElementById('customer-form') as HTMLFormElement;
+    form.reset();
+    (document.getElementById('customer-id') as HTMLInputElement).value = '';
+    const modal = document.getElementById('customer-modal');
+    if (modal) {
+      modal.querySelector('h3')!.textContent = '添加顾客';
+    }
+    openModal('customer-modal');
+  });
+
+  // 编辑顾客按钮
+  document.querySelectorAll('.btn-edit-customer').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const customer = JSON.parse(btn.getAttribute('data-customer') || '{}');
+      (document.getElementById('customer-id') as HTMLInputElement).value = customer.customerId;
+      (document.getElementById('customer-name') as HTMLInputElement).value = customer.customerName;
+      (document.getElementById('customer-phone') as HTMLInputElement).value = customer.phone;
+      (document.getElementById('customer-id-card') as HTMLInputElement).value = customer.idCard || '';
+      const modal = document.getElementById('customer-modal');
+      if (modal) {
+        modal.querySelector('h3')!.textContent = '编辑顾客';
+      }
+      openModal('customer-modal');
+    });
+  });
+
+  // 删除顾客按钮
+  document.querySelectorAll('.btn-delete-customer').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const customerId = btn.getAttribute('data-customer-id');
+      const customerName = btn.getAttribute('data-customer-name');
+      showConfirm(`确定要删除顾客"${customerName}"吗？`, async () => {
+        try {
+          const res = await fetch('/api/customers', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerId: Number(customerId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('删除失败：' + (data.message || '未知错误'));
+          }
+        } catch (err) {
+          alert('删除失败：网络错误');
+        }
+      });
+    });
+  });
+
+  // 确认对话框按钮
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    hideConfirm();
+  });
+
+  document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirm);
+  document.getElementById('confirm-dialog')?.querySelector('.confirm-dialog__backdrop')?.addEventListener('click', hideConfirm);
+
+  // 表单提交
+  document.getElementById('customer-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const customerId = (document.getElementById('customer-id') as HTMLInputElement).value;
+    const data = {
+      customerName: (document.getElementById('customer-name') as HTMLInputElement).value,
+      phone: (document.getElementById('customer-phone') as HTMLInputElement).value,
+      idCard: (document.getElementById('customer-id-card') as HTMLInputElement).value,
+    };
+
+    try {
+      const res = await fetch('/api/customers', {
+        method: customerId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customerId ? { ...data, customerId: Number(customerId) } : data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        closeModal('customer-modal');
+        window.location.reload();
+      } else {
+        alert('保存失败：' + (result.message || '未知错误'));
+      }
+    } catch (err) {
+      alert('保存失败：网络错误');
+    }
+  });
+</script>

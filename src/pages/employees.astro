@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import Modal from '@/components/Modal.astro';
 import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import { getEmployeeAssignmentRows } from '@/data/db';
@@ -24,7 +25,8 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
       { value: totalManagedQty, label: '负责宠物数' },
     ]}
   >
-    <Button label="返回仪表盘" href="/" />
+    <button class="btn btn--primary" id="btn-add-employee">添加员工</button>
+    <Button label="返回仪表盘" href="/" variant="ghost" />
   </PageHero>
 
   <section class="section">
@@ -37,7 +39,7 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
 
       <div class="grid grid--3">
         {employeeRows.map((employee) => (
-          <article class="card scroll-reveal">
+          <article class="card scroll-reveal" data-employee-id={employee.employeeId}>
             <div class="employee-card__top">
               <span class="badge">{employee.gender}</span>
               <span class="employee-card__salary">{formatCurrency(employee.salary)}</span>
@@ -49,6 +51,10 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
               <li><span>负责数量</span><strong>{employee.managedQty}</strong></li>
               <li><span>职责摘要</span><strong>{employee.dutySummary}</strong></li>
             </ul>
+            <div class="card-actions">
+              <button class="btn btn--sm btn-edit-employee" data-employee={JSON.stringify(employee)}>编辑</button>
+              <button class="btn btn--sm btn--danger btn-delete-employee" data-employee-id={employee.employeeId} data-employee-name={employee.employeeName}>删除</button>
+            </div>
           </article>
         ))}
       </div>
@@ -96,6 +102,57 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
       </article>
     </div>
   </section>
+
+  <!-- 添加/编辑员工模态框 -->
+  <Modal id="employee-modal" title="添加员工">
+    <form id="employee-form">
+      <input type="hidden" id="employee-id" name="employeeId" />
+      <div class="form-group">
+        <label for="employee-name">员工姓名 *</label>
+        <input type="text" id="employee-name" name="employeeName" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="employee-gender">性别 *</label>
+          <select id="employee-gender" name="gender" required>
+            <option value="男">男</option>
+            <option value="女">女</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="employee-age">年龄</label>
+          <input type="number" id="employee-age" name="age" min="18" max="100" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="employee-phone">电话</label>
+          <input type="tel" id="employee-phone" name="phone" />
+        </div>
+        <div class="form-group">
+          <label for="employee-salary">工资 *</label>
+          <input type="number" id="employee-salary" name="salary" min="0" step="0.01" required />
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close="employee-modal">取消</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- 删除确认对话框 -->
+  <div id="confirm-dialog" class="confirm-dialog" hidden>
+    <div class="confirm-dialog__backdrop"></div>
+    <div class="confirm-dialog__content">
+      <h4>确认删除</h4>
+      <p id="confirm-message">确定要删除该员工吗？</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" id="confirm-cancel">取消</button>
+        <button class="btn btn--danger" id="confirm-ok">删除</button>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -114,3 +171,144 @@ const totalManagedQty = employeeRows.reduce((sum, item) => sum + item.managedQty
   }
 </style>
 
+<script>
+  // 模态框控制
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = false;
+  }
+
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = true;
+  }
+
+  // 确认对话框
+  let confirmCallback: (() => void) | null = null;
+
+  function showConfirm(message: string, callback: () => void) {
+    const dialog = document.getElementById('confirm-dialog');
+    const msg = document.getElementById('confirm-message');
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.hidden = false;
+      confirmCallback = callback;
+    }
+  }
+
+  function hideConfirm() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) dialog.hidden = true;
+    confirmCallback = null;
+  }
+
+  // 关闭模态框按钮
+  document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.getAttribute('data-modal-close');
+      if (modalId) closeModal(modalId);
+    });
+  });
+
+  // 背景点击关闭模态框
+  document.querySelectorAll('.modal__backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', () => {
+      const modal = backdrop.closest('.modal');
+      if (modal) (modal as HTMLElement).hidden = true;
+    });
+  });
+
+  // 添加员工按钮
+  document.getElementById('btn-add-employee')?.addEventListener('click', () => {
+    const form = document.getElementById('employee-form') as HTMLFormElement;
+    form.reset();
+    (document.getElementById('employee-id') as HTMLInputElement).value = '';
+    const modal = document.getElementById('employee-modal');
+    if (modal) {
+      modal.querySelector('h3')!.textContent = '添加员工';
+    }
+    openModal('employee-modal');
+  });
+
+  // 编辑员工按钮
+  document.querySelectorAll('.btn-edit-employee').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const employee = JSON.parse(btn.getAttribute('data-employee') || '{}');
+      (document.getElementById('employee-id') as HTMLInputElement).value = employee.employeeId;
+      (document.getElementById('employee-name') as HTMLInputElement).value = employee.employeeName;
+      (document.getElementById('employee-gender') as HTMLSelectElement).value = employee.gender;
+      (document.getElementById('employee-phone') as HTMLInputElement).value = employee.phone || '';
+      (document.getElementById('employee-salary') as HTMLInputElement).value = employee.salary;
+      (document.getElementById('employee-age') as HTMLInputElement).value = employee.age || '';
+      const modal = document.getElementById('employee-modal');
+      if (modal) {
+        modal.querySelector('h3')!.textContent = '编辑员工';
+      }
+      openModal('employee-modal');
+    });
+  });
+
+  // 删除员工按钮
+  document.querySelectorAll('.btn-delete-employee').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const employeeId = btn.getAttribute('data-employee-id');
+      const employeeName = btn.getAttribute('data-employee-name');
+      showConfirm(`确定要删除员工"${employeeName}"吗？`, async () => {
+        try {
+          const res = await fetch('/api/employees', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ employeeId: Number(employeeId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('删除失败：' + (data.message || '未知错误'));
+          }
+        } catch (err) {
+          alert('删除失败：网络错误');
+        }
+      });
+    });
+  });
+
+  // 确认对话框按钮
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    hideConfirm();
+  });
+
+  document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirm);
+  document.getElementById('confirm-dialog')?.querySelector('.confirm-dialog__backdrop')?.addEventListener('click', hideConfirm);
+
+  // 表单提交
+  document.getElementById('employee-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const employeeId = (document.getElementById('employee-id') as HTMLInputElement).value;
+    const data = {
+      employeeName: (document.getElementById('employee-name') as HTMLInputElement).value,
+      gender: (document.getElementById('employee-gender') as HTMLSelectElement).value,
+      phone: (document.getElementById('employee-phone') as HTMLInputElement).value || null,
+      salary: Number((document.getElementById('employee-salary') as HTMLInputElement).value),
+      age: (document.getElementById('employee-age') as HTMLInputElement).value ? Number((document.getElementById('employee-age') as HTMLInputElement).value) : null,
+    };
+
+    try {
+      const res = await fetch('/api/employees', {
+        method: employeeId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(employeeId ? { ...data, employeeId: Number(employeeId) } : data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        closeModal('employee-modal');
+        window.location.reload();
+      } else {
+        alert('保存失败：' + (result.message || '未知错误'));
+      }
+    } catch (err) {
+      alert('保存失败：网络错误');
+    }
+  });
+</script>

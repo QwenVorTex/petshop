@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import Modal from '@/components/Modal.astro';
 import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import StatusPill from '@/components/StatusPill.astro';
@@ -32,7 +33,8 @@ const speciesDistribution = await getSpeciesDistribution();
       { value: formatCurrency(snapshot.averagePetPrice), label: '平均单价' },
     ]}
   >
-    <Button label="查看库存页" href="/inventory" />
+    <button class="btn btn--primary" id="btn-add-pet">添加宠物</button>
+    <Button label="查看库存页" href="/inventory" variant="ghost" />
   </PageHero>
 
   <section class="section">
@@ -45,7 +47,7 @@ const speciesDistribution = await getSpeciesDistribution();
 
       <div class="grid grid--brutalist">
         {featuredPets.map((pet) => (
-          <article class="card pet-card scroll-reveal">
+          <article class="card pet-card scroll-reveal" data-pet-id={pet.petId}>
             <div class="pet-card__top">
               <span class="badge">{pet.petSpecies}</span>
               <StatusPill status={pet.petStatus} />
@@ -58,6 +60,10 @@ const speciesDistribution = await getSpeciesDistribution();
               <li><strong>仓位</strong><span>{pet.inventory?.warehouseLocation ?? '待安排'}</span></li>
               <li><strong>负责员工</strong><span>{pet.managers}</span></li>
             </ul>
+            <div class="card-actions">
+              <button class="btn btn--sm btn-edit-pet" data-pet={JSON.stringify(pet)}>编辑</button>
+              <button class="btn btn--sm btn--danger btn-delete-pet" data-pet-id={pet.petId} data-pet-name={pet.petName}>删除</button>
+            </div>
           </article>
         ))}
       </div>
@@ -132,6 +138,65 @@ const speciesDistribution = await getSpeciesDistribution();
       </aside>
     </div>
   </section>
+
+  <!-- 添加/编辑宠物模态框 -->
+  <Modal id="pet-modal" title="添加宠物">
+    <form id="pet-form">
+      <input type="hidden" id="pet-id" name="petId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pet-name">宠物名称 *</label>
+          <input type="text" id="pet-name" name="petName" required />
+        </div>
+        <div class="form-group">
+          <label for="pet-species">品种 *</label>
+          <input type="text" id="pet-species" name="petSpecies" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pet-color">毛色</label>
+          <input type="text" id="pet-color" name="petColor" />
+        </div>
+        <div class="form-group">
+          <label for="pet-age">年龄（月）</label>
+          <input type="number" id="pet-age" name="petAge" min="0" />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pet-price">价格 *</label>
+          <input type="number" id="pet-price" name="petPrice" min="0" step="0.01" required />
+        </div>
+        <div class="form-group">
+          <label for="pet-status">状态</label>
+          <select id="pet-status" name="petStatus">
+            <option value="在售">在售</option>
+            <option value="已预订">已预订</option>
+            <option value="观察中">观察中</option>
+            <option value="已售出">已售出</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close="pet-modal">取消</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- 删除确认对话框 -->
+  <div id="confirm-dialog" class="confirm-dialog" hidden>
+    <div class="confirm-dialog__backdrop"></div>
+    <div class="confirm-dialog__content">
+      <h4>确认删除</h4>
+      <p id="confirm-message">确定要删除该宠物吗？</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" id="confirm-cancel">取消</button>
+        <button class="btn btn--danger" id="confirm-ok">删除</button>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -175,3 +240,147 @@ const speciesDistribution = await getSpeciesDistribution();
   }
 </style>
 
+<script>
+  // 模态框控制
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = false;
+  }
+
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = true;
+  }
+
+  // 确认对话框
+  let confirmCallback: (() => void) | null = null;
+
+  function showConfirm(message: string, callback: () => void) {
+    const dialog = document.getElementById('confirm-dialog');
+    const msg = document.getElementById('confirm-message');
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.hidden = false;
+      confirmCallback = callback;
+    }
+  }
+
+  function hideConfirm() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) dialog.hidden = true;
+    confirmCallback = null;
+  }
+
+  // 关闭模态框按钮
+  document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.getAttribute('data-modal-close');
+      if (modalId) closeModal(modalId);
+    });
+  });
+
+  // 背景点击关闭模态框
+  document.querySelectorAll('.modal__backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', () => {
+      const modal = backdrop.closest('.modal');
+      if (modal) (modal as HTMLElement).hidden = true;
+    });
+  });
+
+  // 添加宠物按钮
+  document.getElementById('btn-add-pet')?.addEventListener('click', () => {
+    const form = document.getElementById('pet-form') as HTMLFormElement;
+    form.reset();
+    (document.getElementById('pet-id') as HTMLInputElement).value = '';
+    const modal = document.getElementById('pet-modal');
+    if (modal) {
+      modal.querySelector('h3')!.textContent = '添加宠物';
+    }
+    openModal('pet-modal');
+  });
+
+  // 编辑宠物按钮
+  document.querySelectorAll('.btn-edit-pet').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pet = JSON.parse(btn.getAttribute('data-pet') || '{}');
+      (document.getElementById('pet-id') as HTMLInputElement).value = pet.petId;
+      (document.getElementById('pet-name') as HTMLInputElement).value = pet.petName;
+      (document.getElementById('pet-species') as HTMLInputElement).value = pet.petSpecies;
+      (document.getElementById('pet-color') as HTMLInputElement).value = pet.petColor || '';
+      (document.getElementById('pet-age') as HTMLInputElement).value = pet.petAge || '';
+      (document.getElementById('pet-price') as HTMLInputElement).value = pet.petPrice;
+      (document.getElementById('pet-status') as HTMLSelectElement).value = pet.petStatus;
+      const modal = document.getElementById('pet-modal');
+      if (modal) {
+        modal.querySelector('h3')!.textContent = '编辑宠物';
+      }
+      openModal('pet-modal');
+    });
+  });
+
+  // 删除宠物按钮
+  document.querySelectorAll('.btn-delete-pet').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const petId = btn.getAttribute('data-pet-id');
+      const petName = btn.getAttribute('data-pet-name');
+      showConfirm(`确定要删除宠物"${petName}"吗？`, async () => {
+        try {
+          const res = await fetch('/api/pets', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ petId: Number(petId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('删除失败：' + (data.message || '未知错误'));
+          }
+        } catch (err) {
+          alert('删除失败：网络错误');
+        }
+      });
+    });
+  });
+
+  // 确认对话框按钮
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    hideConfirm();
+  });
+
+  document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirm);
+  document.getElementById('confirm-dialog')?.querySelector('.confirm-dialog__backdrop')?.addEventListener('click', hideConfirm);
+
+  // 表单提交
+  document.getElementById('pet-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const petId = (document.getElementById('pet-id') as HTMLInputElement).value;
+    const data = {
+      petName: (document.getElementById('pet-name') as HTMLInputElement).value,
+      petSpecies: (document.getElementById('pet-species') as HTMLInputElement).value,
+      petColor: (document.getElementById('pet-color') as HTMLInputElement).value || null,
+      petAge: (document.getElementById('pet-age') as HTMLInputElement).value ? Number((document.getElementById('pet-age') as HTMLInputElement).value) : null,
+      petPrice: Number((document.getElementById('pet-price') as HTMLInputElement).value),
+      petStatus: (document.getElementById('pet-status') as HTMLSelectElement).value,
+    };
+
+    try {
+      const res = await fetch('/api/pets', {
+        method: petId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(petId ? { ...data, petId: Number(petId) } : data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        closeModal('pet-modal');
+        window.location.reload();
+      } else {
+        alert('保存失败：' + (result.message || '未知错误'));
+      }
+    } catch (err) {
+      alert('保存失败：网络错误');
+    }
+  });
+</script>

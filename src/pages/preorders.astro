@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '@/layouts/BaseLayout.astro';
 import Button from '@/components/Button.astro';
+import Modal from '@/components/Modal.astro';
 import PageHero from '@/components/PageHero.astro';
 import SectionIntro from '@/components/SectionIntro.astro';
 import StatusPill from '@/components/StatusPill.astro';
@@ -27,7 +28,8 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
     ]}
     tone="link"
   >
-    <Button label="查看顾客页" href="/customers" />
+    <button class="btn btn--primary" id="btn-add-preorder">新建预约</button>
+    <Button label="查看顾客页" href="/customers" variant="ghost" />
   </PageHero>
 
   <section class="section">
@@ -35,7 +37,7 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
       <SectionIntro
         eyebrow="Kanban"
         title="状态看板"
-        description="按状态分列的预约看板。"
+        description="按状态分列的预约看板，点击卡片可更新状态。"
       />
 
       <div class="kanban-grid">
@@ -54,6 +56,10 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
                     <strong>{item.customerName}</strong>
                     <p>{item.petName} · {item.petSpecies}</p>
                     <p>{item.remark}</p>
+                    <div class="kanban-ticket__actions">
+                      <button class="btn btn--sm btn-edit-preorder" data-preorder={JSON.stringify(item)}>编辑</button>
+                      <button class="btn btn--sm btn--danger btn-delete-preorder" data-preorder-id={item.preorderId}>删除</button>
+                    </div>
                   </article>
                 ))
               ) : (
@@ -85,6 +91,7 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
                 <th>预约时间</th>
                 <th>数量</th>
                 <th>金额</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -99,6 +106,12 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
                   <td>{formatDateTime(item.preorderTime)}</td>
                   <td>{item.preorderQty}</td>
                   <td>{formatCurrency(item.petPrice)}</td>
+                  <td>
+                    <div class="table-actions">
+                      <button class="btn btn--sm btn-edit-preorder" data-preorder={JSON.stringify(item)}>编辑</button>
+                      <button class="btn btn--sm btn--danger btn-delete-preorder" data-preorder-id={item.preorderId}>删除</button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -107,6 +120,59 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
       </article>
     </div>
   </section>
+
+  <!-- 添加/编辑预约模态框 -->
+  <Modal id="preorder-modal" title="新建预约">
+    <form id="preorder-form">
+      <input type="hidden" id="preorder-id" name="preorderId" />
+      <div class="form-row">
+        <div class="form-group">
+          <label for="preorder-customer-id">顾客ID *</label>
+          <input type="number" id="preorder-customer-id" name="customerId" min="1" required />
+        </div>
+        <div class="form-group">
+          <label for="preorder-pet-id">宠物ID *</label>
+          <input type="number" id="preorder-pet-id" name="petId" min="1" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="preorder-qty">数量</label>
+          <input type="number" id="preorder-qty" name="preorderQty" min="1" value="1" />
+        </div>
+        <div class="form-group">
+          <label for="preorder-status">状态</label>
+          <select id="preorder-status" name="preorderStatus">
+            <option value="已预约">已预约</option>
+            <option value="待到店">待到店</option>
+            <option value="已完成">已完成</option>
+            <option value="已取消">已取消</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="preorder-remark">备注</label>
+        <textarea id="preorder-remark" name="remark" rows="3"></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn--ghost" data-modal-close="preorder-modal">取消</button>
+        <button type="submit" class="btn btn--primary">保存</button>
+      </div>
+    </form>
+  </Modal>
+
+  <!-- 删除确认对话框 -->
+  <div id="confirm-dialog" class="confirm-dialog" hidden>
+    <div class="confirm-dialog__backdrop"></div>
+    <div class="confirm-dialog__content">
+      <h4>确认删除</h4>
+      <p id="confirm-message">确定要删除该预约吗？</p>
+      <div class="confirm-dialog__actions">
+        <button class="btn btn--ghost" id="confirm-cancel">取消</button>
+        <button class="btn btn--danger" id="confirm-ok">删除</button>
+      </div>
+    </div>
+  </div>
 </BaseLayout>
 
 <style>
@@ -142,9 +208,22 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
     margin-bottom: 0;
   }
 
+  .kanban-ticket__actions {
+    display: flex;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: var(--border-medium);
+  }
+
   .kanban-empty {
     margin-bottom: 0;
     color: var(--color-text-muted);
+  }
+
+  .table-actions {
+    display: flex;
+    gap: var(--space-2);
   }
 
   @media (max-width: 1024px) {
@@ -160,3 +239,144 @@ const completedCount = board.find((item) => item.status === '已完成')?.items.
   }
 </style>
 
+<script>
+  // 模态框控制
+  function openModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = false;
+  }
+
+  function closeModal(id: string) {
+    const modal = document.getElementById(id);
+    if (modal) modal.hidden = true;
+  }
+
+  // 确认对话框
+  let confirmCallback: (() => void) | null = null;
+
+  function showConfirm(message: string, callback: () => void) {
+    const dialog = document.getElementById('confirm-dialog');
+    const msg = document.getElementById('confirm-message');
+    if (dialog && msg) {
+      msg.textContent = message;
+      dialog.hidden = false;
+      confirmCallback = callback;
+    }
+  }
+
+  function hideConfirm() {
+    const dialog = document.getElementById('confirm-dialog');
+    if (dialog) dialog.hidden = true;
+    confirmCallback = null;
+  }
+
+  // 关闭模态框按钮
+  document.querySelectorAll('[data-modal-close]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const modalId = btn.getAttribute('data-modal-close');
+      if (modalId) closeModal(modalId);
+    });
+  });
+
+  // 背景点击关闭模态框
+  document.querySelectorAll('.modal__backdrop').forEach((backdrop) => {
+    backdrop.addEventListener('click', () => {
+      const modal = backdrop.closest('.modal');
+      if (modal) (modal as HTMLElement).hidden = true;
+    });
+  });
+
+  // 新建预约按钮
+  document.getElementById('btn-add-preorder')?.addEventListener('click', () => {
+    const form = document.getElementById('preorder-form') as HTMLFormElement;
+    form.reset();
+    (document.getElementById('preorder-id') as HTMLInputElement).value = '';
+    (document.getElementById('preorder-qty') as HTMLInputElement).value = '1';
+    const modal = document.getElementById('preorder-modal');
+    if (modal) {
+      modal.querySelector('h3')!.textContent = '新建预约';
+    }
+    openModal('preorder-modal');
+  });
+
+  // 编辑预约按钮
+  document.querySelectorAll('.btn-edit-preorder').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preorder = JSON.parse(btn.getAttribute('data-preorder') || '{}');
+      (document.getElementById('preorder-id') as HTMLInputElement).value = preorder.preorderId;
+      (document.getElementById('preorder-customer-id') as HTMLInputElement).value = preorder.customerId || '';
+      (document.getElementById('preorder-pet-id') as HTMLInputElement).value = preorder.petId || '';
+      (document.getElementById('preorder-qty') as HTMLInputElement).value = preorder.preorderQty || '1';
+      (document.getElementById('preorder-status') as HTMLSelectElement).value = preorder.preorderStatus;
+      (document.getElementById('preorder-remark') as HTMLTextAreaElement).value = preorder.remark || '';
+      const modal = document.getElementById('preorder-modal');
+      if (modal) {
+        modal.querySelector('h3')!.textContent = '编辑预约';
+      }
+      openModal('preorder-modal');
+    });
+  });
+
+  // 删除预约按钮
+  document.querySelectorAll('.btn-delete-preorder').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const preorderId = btn.getAttribute('data-preorderId');
+      showConfirm('确定要删除该预约吗？', async () => {
+        try {
+          const res = await fetch('/api/preorders', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ preorderId: Number(preorderId) }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+          } else {
+            alert('删除失败：' + (data.message || '未知错误'));
+          }
+        } catch (err) {
+          alert('删除失败：网络错误');
+        }
+      });
+    });
+  });
+
+  // 确认对话框按钮
+  document.getElementById('confirm-ok')?.addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    hideConfirm();
+  });
+
+  document.getElementById('confirm-cancel')?.addEventListener('click', hideConfirm);
+  document.getElementById('confirm-dialog')?.querySelector('.confirm-dialog__backdrop')?.addEventListener('click', hideConfirm);
+
+  // 表单提交
+  document.getElementById('preorder-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const preorderId = (document.getElementById('preorder-id') as HTMLInputElement).value;
+    const data = {
+      customerId: Number((document.getElementById('preorder-customer-id') as HTMLInputElement).value),
+      petId: Number((document.getElementById('preorder-pet-id') as HTMLInputElement).value),
+      preorderQty: Number((document.getElementById('preorder-qty') as HTMLInputElement).value),
+      preorderStatus: (document.getElementById('preorder-status') as HTMLSelectElement).value,
+      remark: (document.getElementById('preorder-remark') as HTMLTextAreaElement).value || null,
+    };
+
+    try {
+      const res = await fetch('/api/preorders', {
+        method: preorderId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(preorderId ? { ...data, preorderId: Number(preorderId) } : data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        closeModal('preorder-modal');
+        window.location.reload();
+      } else {
+        alert('保存失败：' + (result.message || '未知错误'));
+      }
+    } catch (err) {
+      alert('保存失败：网络错误');
+    }
+  });
+</script>
